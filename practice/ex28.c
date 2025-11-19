@@ -1,145 +1,78 @@
+// expression tree evaluation
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h> // for isdigit()
+#include <ctype.h>   // for isdigit()
 
-// Structure for tree node
+// Expression tree node
 struct Node {
     char data;
     struct Node *left, *right;
 };
 
-// Stack for nodes
-struct Stack {
-    int top;
-    struct Node* arr[50];
-};
+// Stack of Node pointers
+struct Node* stack[100];
+int top = -1;
+
+void push(struct Node* x) {
+    stack[++top] = x;
+}
+
+struct Node* pop() {
+    return stack[top--];
+}
 
 // Create a new tree node
-struct Node* createNode(char data) {
-    struct Node* newNode = (struct Node*)malloc(sizeof(struct Node));
-    newNode->data = data;
-    newNode->left = newNode->right = NULL;
-    return newNode;
-}
-
-// Initialize stack
-void initStack(struct Stack* s) {
-    s->top = -1;
-}
-
-// Push node onto stack
-void push(struct Stack* s, struct Node* node) {
-    s->arr[++(s->top)] = node;
-}
-
-// Pop node from stack
-struct Node* pop(struct Stack* s) {
-    if (s->top == -1) return NULL;
-    return s->arr[(s->top)--];
-}
-
-// Check if operator
-int isOperator(char c) {
-    return (c == '+' || c == '-' || c == '*' || c == '/' || c == '^');
+struct Node* newNode(char value) {
+    struct Node* temp = (struct Node*)malloc(sizeof(struct Node));
+    temp->data = value;
+    temp->left = temp->right = NULL;
+    return temp;
 }
 
 // Build expression tree from postfix
 struct Node* buildTree(char postfix[]) {
-    struct Stack s;
-    initStack(&s);
-
     for (int i = 0; postfix[i] != '\0'; i++) {
         char ch = postfix[i];
 
-        if (isspace(ch)) continue; // Skip spaces
-
-        // If operand, create node and push
-        if (isdigit(ch)) {
-            struct Node* newNode = createNode(ch);
-            push(&s, newNode);
-        }
-        // If operator, pop two nodes, make them children
-        else if (isOperator(ch)) {
-            struct Node* newNode = createNode(ch);
-            newNode->right = pop(&s);
-            newNode->left = pop(&s);
-            push(&s, newNode);
+        if (isdigit(ch)) {  // operand
+            push(newNode(ch));
+        } else {            // operator
+            struct Node* root = newNode(ch);
+            root->right = pop();
+            root->left = pop();
+            push(root);
         }
     }
-
-    // Final node is root
-    return pop(&s);
+    return pop();  // final tree root
 }
 
-// Inorder traversal (with parentheses for clarity)
-void inorder(struct Node* root) {
-    if (root == NULL) return;
-    if (isOperator(root->data)) printf("(");
-    inorder(root->left);
-    printf("%c", root->data);
-    inorder(root->right);
-    if (isOperator(root->data)) printf(")");
-}
-
-// Preorder traversal
-void preorder(struct Node* root) {
-    if (root == NULL) return;
-    printf("%c ", root->data);
-    preorder(root->left);
-    preorder(root->right);
-}
-
-// Postorder traversal
-void postorder(struct Node* root) {
-    if (root == NULL) return;
-    postorder(root->left);
-    postorder(root->right);
-    printf("%c ", root->data);
-}
-
-// Evaluate expression tree
+// Evaluate the expression tree
 int evaluate(struct Node* root) {
-    if (root == NULL) return 0;
+    if (root == NULL)
+        return 0;
 
-    // If it's a leaf node (operand)
-    if (!isOperator(root->data))
-        return root->data - '0';  // convert char digit to int
+    // If leaf node (operand)
+    if (isdigit(root->data))
+        return root->data - '0';
 
-    // Evaluate left and right subtrees
-    int leftVal = evaluate(root->left);
-    int rightVal = evaluate(root->right);
+    int left = evaluate(root->left);
+    int right = evaluate(root->right);
 
-    // Apply operator
     switch (root->data) {
-        case '+': return leftVal + rightVal;
-        case '-': return leftVal - rightVal;
-        case '*': return leftVal * rightVal;
-        case '/': return leftVal / rightVal;
-        case '^': {
-            int res = 1;
-            for (int i = 0; i < rightVal; i++) res *= leftVal;
-            return res;
-        }
+        case '+': return left + right;
+        case '-': return left - right;
+        case '*': return left * right;
+        case '/': return left / right;
     }
     return 0;
 }
 
-// Main function
 int main() {
-    char postfix[50];
-    printf("Enter postfix expression: ");
-    scanf("%s", postfix);
+    char postfix[] = "53+82-*";  // Example: (5+3)*(8-2)
 
     struct Node* root = buildTree(postfix);
 
-    printf("\nInorder traversal: ");
-    inorder(root);
-    printf("\nPreorder traversal: ");
-    preorder(root);
-    printf("\nPostorder traversal: ");
-    postorder(root);
-
-    printf("\nEvaluated result: %d\n", evaluate(root));
+    printf("Result = %d\n", evaluate(root));
 
     return 0;
 }
